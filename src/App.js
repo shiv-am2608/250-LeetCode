@@ -1,0 +1,148 @@
+import React, { useState, useEffect, createContext } from "react";
+import { BrowserRouter as Router, Route } from "react-router-dom";
+import { getData, updateDBData, resetDBData, exportDBData, importDBData } from "./services/dbServices";
+import { saveAs } from "file-saver";
+import Spinner from "react-bootstrap/Spinner";
+import TopicCard from "./components/TopicCard/TopicCard";
+import Topic from "./components/Topic/Topic";
+import About from "./components/About/About";
+import Footer from "./components/Footer/Footer";
+import ReactGA from "react-ga";
+import "./App.css";
+
+// Creating a theme context
+export const ThemeContext = createContext(null);
+
+function App() {
+	// setting state for data received from the DB
+	const [questionData, setquestionData] = useState([]);
+
+	// if dark theme is enabled or not
+	const [dark, setDark] = useState(false);
+
+	// useEffect for fetching data from DB on load and init GA
+	useEffect(() => {
+		localStorage.removeItem("cid");
+		ReactGA.initialize(process.env.REACT_APP_GA_TRACKING_ID);
+		ReactGA.pageview(window.location.pathname + window.location.search);
+		getData((QuestionData) => {
+			setquestionData(QuestionData);
+		});
+
+		//implementing dark theme mode option
+		// checking if dark mode "isDark" is already declared or not
+		if (!("isDark" in window.localStorage)) {
+			window.localStorage.setItem("isDark", dark);
+		} else {
+			// initialising the value of dark with the already stored value
+			let temp = window.localStorage["isDark"];
+			if (temp === "false") {
+				setDark(false);
+			} else {
+				setDark(true);
+			}
+		}
+	}, []);
+
+	//to update progress in '/' route and also update DB
+	function updateData(key, topicData, topicPosition) {
+		let reGenerateUpdatedData = questionData.map((topic, index) => {
+			if (index === topicPosition) {
+				updateDBData(key, topicData);
+				return { topicName: topic.topicName, position: topic.position, ...topicData };
+			} else {
+				return topic;
+			}
+		});
+		setquestionData(reGenerateUpdatedData);
+	}
+
+	// reset and clear DB
+	function resetData() {
+		resetDBData((response) => {
+			setquestionData([]);
+			window.location.replace(window.location.origin);
+		});
+	}
+
+	// export 250DSA-Progress data
+
+	function exportData(callback) {
+		exportDBData((data) => {
+			const fileData = JSON.stringify(data);
+			const blob = new Blob([fileData], { type: "text/plain" });
+			saveAs(blob, "progress.json");
+			callback();
+		});
+	}
+
+	// import 250DSA-Progress data
+
+	function importData(data, callback) {
+		importDBData(data, (QuestionData) => {
+			setquestionData(QuestionData);
+			callback();
+		});
+	}
+
+	return (
+		<Router>
+			<div className={dark ? "App dark" : "App"}>
+				<h1 className="app-heading text-center mt-5" style={{ color: dark ? "white" : "" }}>
+					LeetCode Questions
+				</h1>
+
+				{questionData.length === 0 ? (
+					// load spinner until data is fetched from DB
+					<div className="d-flex justify-content-center">
+						<Spinner animation="grow" variant="success" />
+					</div>
+				) : (
+					<>
+						<ThemeContext.Provider value={dark}>
+							{/* HOME AND ABOUT ROUTE */}
+							<Route exact path="/" children={<TopicCard questionData={questionData}></TopicCard>} />
+							<Route
+								path="/about"
+								children={
+									<About
+										resetData={resetData}
+										exportData={exportData}
+										importData={importData}
+										setQuestionData={setquestionData}
+									></About>
+								}
+							/>
+
+							{/* TOPIC ROUTE */}
+							<Route path="/array" children={<Topic data={questionData[0]} updateData={updateData} />} />
+							<Route path="/dynamic_programming" children={<Topic data={questionData[1]} updateData={updateData} />} />
+							<Route path="/string" children={<Topic data={questionData[2]} updateData={updateData} />} />
+							<Route path="/maths" children={<Topic data={questionData[3]} updateData={updateData} />} />
+							<Route path="/greedy" children={<Topic data={questionData[4]} updateData={updateData} />} />
+							<Route path="/depth_first_search" children={<Topic data={questionData[5]} updateData={updateData} />} />
+							<Route path="/tree" children={<Topic data={questionData[6]} updateData={updateData} />} />
+							<Route path="/hash_table" children={<Topic data={questionData[7]} updateData={updateData} />} />
+							<Route path="/binary_search" children={<Topic data={questionData[8]} updateData={updateData} />} />
+							<Route path="/breadth_first_search" children={<Topic data={questionData[9]} updateData={updateData} />} />
+							<Route path="/two_pointer" children={<Topic data={questionData[10]} updateData={updateData} />} />
+							<Route path="/backtracking" children={<Topic data={questionData[11]} updateData={updateData} />} />
+							<Route path="/stack" children={<Topic data={questionData[12]} updateData={updateData} />} />
+							<Route path="/design" children={<Topic data={questionData[13]} updateData={updateData} />} />
+							<Route path="/graph" children={<Topic data={questionData[14]} updateData={updateData} />} />
+							<Route path="/bit_manipulation" children={<Topic data={questionData[15]} updateData={updateData} />} />
+							<Route path="/linked_list" children={<Topic data={questionData[16]} updateData={updateData} />} />
+							<Route path="/heap" children={<Topic data={questionData[17]} updateData={updateData} />} />
+							<Route path="/sliding_window" children={<Topic data={questionData[18]} updateData={updateData} />} />
+							<Route path="/trie" children={<Topic data={questionData[19]} updateData={updateData} />} />
+							<Route path="/segment_tree" children={<Topic data={questionData[20]} updateData={updateData} />} />
+						</ThemeContext.Provider>
+					</>
+				)}
+				<Footer dark={dark} setDark={setDark}></Footer>
+			</div>
+		</Router>
+	);
+}
+
+export default App;
